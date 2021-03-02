@@ -1,45 +1,19 @@
-import csv
+import pathlib
 
-import requests
+from fastapi import FastAPI, Request
+from fastapi.templating import Jinja2Templates
 
-URL = "https://spotifycharts.com/regional/jp/daily/latest/download"
+from . import data
 
+app = FastAPI()
 
-class Song:
-  def __init__(self, rank, title, artist, count, url):
-    self.rank = rank
-    self.title = title
-    self.artist = artist
-    self.count = count
-    self.url = url
+base_dir_path = pathlib.Path(__file__).parent
+template_dir_path = base_dir_path / "templates"
+templates = Jinja2Templates(directory=template_dir_path)
 
-
-def fetch_ranking():
-  r = requests.get(URL)
-  reader = csv.reader(r.text.split("\n"))
-  next(reader)
-  next(reader)
-  song_list = []
-  for row in reader:
-    if len(row) < 3: continue
-    rank = int(row[0])
-    title = row[1]
-    artist = row[2]
-    count = int(row[3])
-    url = row[4]
-    song = Song(rank, title, artist, count, url)
-    song_list.append(song)
-  return song_list
+songs = data.fetch_ranking()
 
 
-def main():
-  song_list = fetch_ranking()
-
-  artist_map = {}
-  for song in song_list:
-    artist_map[song.artist] = artist_map.get(song.artist, 0) + 1
-  print(artist_map)
-
-
-if __name__ == '__main__':
-  main()
+@app.get("/")
+async def home(request: Request):
+  return templates.TemplateResponse("home.html", dict(request=request))
