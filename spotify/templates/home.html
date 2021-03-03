@@ -6,7 +6,54 @@
 </head>
 
 <body>
-<h1>test</h1>
+
+<div style="display: flex">
+  <div style="margin-right: 40px">
+    <h2>songs</h2>
+    <table border="1">
+      <thead>
+      <tr>
+        <th>rank</th>
+        <th>title</th>
+        <th>artis</th>
+        <th>count</th>
+      </tr>
+      </thead>
+      <tbody>
+      {% for song in songs %}
+      <tr>
+        <td>{{ song.rank }}</td>
+        <td><a href="{{ song.url }}">{{ song.title }}</a></td>
+        <td>{{ song.artist }}</td>
+        <td>{{ song.count }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div>
+    <h2>artists</h2>
+    <table border="1">
+      <thead>
+      <tr>
+        <th>artist</th>
+        <th>曲数</th>
+      </tr>
+
+      </thead>
+      <tbody>
+      {% for artist, songs in artists.items() %}
+      <tr>
+        <td>{{ artist }}</td>
+        <td>{{ songs|length }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+
+    </table>
+
+  </div>
+</div>
 </body>
 
 </html>

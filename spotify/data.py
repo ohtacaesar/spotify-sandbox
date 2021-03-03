@@ -14,7 +14,7 @@ class Song:
     self.url = url
 
 
-def fetch_ranking():
+def fetch_ranking() -> list:
   r = requests.get(URL)
   reader = csv.reader(r.text.split("\n"))
   next(reader)
