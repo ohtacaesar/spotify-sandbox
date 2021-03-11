@@ -1,20 +1,30 @@
 import csv
+from dataclasses import dataclass
+from typing import List
 
 import requests
 
 URL = "https://spotifycharts.com/regional/jp/daily/latest/download"
 
 
+@dataclass()
 class Song:
-  def __init__(self, rank, title, artist, count, url):
-    self.rank = rank
-    self.title = title
-    self.artist = artist
-    self.count = count
-    self.url = url
+  rank: int
+  title: str
+  artist: str
+  count: int
+  url: str
+
+  @property
+  def id(self) -> str:
+    return self.url[self.url.rfind("/") + 1:]
+
+  @property
+  def uri(self) -> str:
+    return f"spotify:track:{self.id}"
 
 
-def fetch_ranking() -> list:
+def fetch_ranking() -> List[Song]:
   r = requests.get(URL)
   reader = csv.reader(r.text.split("\n"))
   next(reader)

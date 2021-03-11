@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+{% block content %}
+<div>
+  <table>
+    <thead>
+    <tr>
+      <th>id</th>
+      <th>name</th>
+      <th>public</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for playlist in playlists %}
+    <tr>
+      <td>{{ playlist.id }}</td>
+      <td>{{ playlist.name }}</td>
+      <td>{{ playlist.public }}</td>
+      <td>
+        <form action="/playlists/{{ playlist.id }}" method="post">
+          <button>RELOAD</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
