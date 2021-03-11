@@ -1,12 +1,6 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>home</title>
-</head>
+{% extends "layout.html" %}
 
-<body>
-
+{% block content %}
 <div style="display: flex">
   <div style="margin-right: 40px">
     <h2>songs</h2>
@@ -17,6 +11,7 @@
         <th>title</th>
         <th>artis</th>
         <th>count</th>
+        <th>id</th>
       </tr>
       </thead>
       <tbody>
@@ -26,6 +21,7 @@
         <td><a href="{{ song.url }}">{{ song.title }}</a></td>
         <td>{{ song.artist }}</td>
         <td>{{ song.count }}</td>
+        <td>{{ song.uri }}</td>
       </tr>
       {% endfor %}
       </tbody>
@@ -51,9 +47,6 @@
       </tbody>
 
     </table>
-
   </div>
 </div>
-</body>
-
-</html>
+{% endblock %}
