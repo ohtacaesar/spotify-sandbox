@@ -7,6 +7,9 @@
       <th>id</th>
       <th>name</th>
       <th>public</th>
+      <th>自動更新対象</th>
+      <th></th>
+      <th></th>
     </tr>
     </thead>
     <tbody>
@@ -15,9 +18,15 @@
       <td>{{ playlist.id }}</td>
       <td>{{ playlist.name }}</td>
       <td>{{ playlist.public }}</td>
+      <td>{{ '〇' if playlist.id == reload_playlist_id }}</td>
       <td>
-        <form action="/playlists/{{ playlist.id }}" method="post">
-          <button>RELOAD</button>
+        <form action="/playlists/{{ playlist.id }}/set" method="post">
+          <button>自動更新対象設定</button>
+        </form>
+      </td>
+      <td>
+        <form action="/playlists/{{ playlist.id }}/replace" method="post">
+          <button>REPLACE</button>
         </form>
       </td>
     </tr>

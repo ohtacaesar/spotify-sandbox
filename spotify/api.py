@@ -1,6 +1,5 @@
 import base64
 import json
-import urllib.parse
 import logging
 from dataclasses import dataclass
 from typing import Optional, List
@@ -10,6 +9,22 @@ import requests
 logger = logging.getLogger(__name__)
 
 
+class AuthorizationError(Exception):
+  pass
+
+
+class UnauthorizedError(Exception):
+  pass
+
+
+class AccessTokenExpiredError(UnauthorizedError):
+  pass
+
+
+class ApiError(Exception):
+  pass
+
+
 @dataclass()
 class Token:
   access_token: str
@@ -17,6 +32,19 @@ class Token:
   scope: str
   expires_in: int
   refresh_token: str
+
+  def to_dict(self) -> dict:
+    return self.__dict__.copy()
+
+
+def create_token_from_dict(o: dict) -> Token:
+  return Token(
+    o['access_token'],
+    o['token_type'],
+    o['scope'],
+    o['expires_in'],
+    o['refresh_token']
+  )
 
 
 @dataclass()
@@ -40,7 +68,7 @@ def fetch_token(
   client_id: str,
   client_secret: str,
   redirect_uri: str,
-) -> Optional[Token]:
+) -> Token:
   url = f"https://accounts.spotify.com/api/token"
   secret = base64.b64encode(f"{client_id}:{client_secret}".encode('utf-8'))
 
@@ -51,18 +79,28 @@ def fetch_token(
     redirect_uri=redirect_uri,
   )
   r = requests.post(url, data=payload, headers=headers)
-  if not r.ok:
-    logger.error(r.text)
-    return None
-
+  validate_response(r)
   body = r.json()
-  return Token(
-    body['access_token'],
-    body['token_type'],
-    body['scope'],
-    body['expires_in'],
-    body['refresh_token']
-  )
+  return create_token_from_dict(body)
+
+
+def refresh_token():
+  pass
+
+
+def validate_response(r: requests.Response):
+  if r.ok:
+    return
+
+  if r.status_code == 401:
+    body = r.json()
+    message = f'{body.get("error", {}).get("message")}({r.status_code})'
+    if message.startswith("The access token expired"):
+      raise AccessTokenExpiredError(message)
+    else:
+      raise UnauthorizedError(message)
+  else:
+    raise ApiError(f"{r.status_code}: {r.text}")
 
 
 @dataclass()
@@ -76,14 +114,17 @@ class ApiClient:
     return headers
 
   def refresh_token(self) -> Token:
-    params = dict(grant_type='refresh_token',
-                  refresh_token=self.token.refresh_token)
+    payload = dict(grant_type='refresh_token',
+                   refresh_token=self.token.refresh_token)
 
-    qs = urllib.parse.urlencode(params)
-    r = requests.get(f"https://accounts.spotify.com/api/token?${qs}",
-                     headers=self._headers())
+    secret = f"{self.client_id}:{self.client_secret}".encode('utf-8')
+    secret = base64.b64encode(secret)
+    headers = dict(Authorization="Basic " + secret.decode('utf-8'))
+    r = requests.post(f"https://accounts.spotify.com/api/token", data=payload,
+                      headers=headers)
+
     if not r.ok:
-      logger.error(r.text)
+      raise AuthorizationError(r.json().get("error"))
 
     data = r.json()
     token = Token(
@@ -100,22 +141,18 @@ class ApiClient:
   def fetch_profile(self) -> Optional[Profile]:
     r = requests.get("https://api.spotify.com/v1/me",
                      headers=self._headers())
-    if not r.ok:
-      logger.error(r.text)
-      return None
+    validate_response(r)
 
     data = r.json()
     return Profile(
       data.get('id'), data.get('display_name'), data.get('uri'),
       data.get('country'))
 
-  def fetch_playlists(self) -> Optional[List[Playlist]]:
+  def fetch_playlists(self) -> List[Playlist]:
     r = requests.get("https://api.spotify.com/v1/me/playlists",
                      headers=self._headers())
 
-    if not r.ok:
-      logger.error(r.text)
-      return None
+    validate_response(r)
 
     playlists = []
     for item in r.json()['items']:
@@ -133,8 +170,6 @@ class ApiClient:
       json=json.dumps(payload),
       headers=self._headers()
     )
-    if not r.ok:
-      logger.error(r.text)
-      return None
+    validate_response(r)
 
     print(r.json())
