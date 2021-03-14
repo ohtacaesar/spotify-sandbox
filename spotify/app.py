@@ -1,4 +1,3 @@
-import json
 import logging
 import pathlib
 import urllib.parse
@@ -8,7 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from . import data, api, service, user, config
+from spotify import data, api, service, user, config
 
 logger = logging.getLogger('spotify')
 logger.setLevel(logging.INFO)
@@ -125,7 +124,7 @@ async def login_callback(code: str = None):
     return RedirectResponse('/', 302)
 
   client = get_api_client()
-  profile = client.fetch_profile()
+  profile = client.get_current_user_profile()
   SESSION['profile'] = profile
 
   return RedirectResponse(SESSION.pop('redirect', '/'), 302)

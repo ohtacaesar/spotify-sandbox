@@ -138,7 +138,7 @@ class ApiClient:
 
     return token
 
-  def fetch_profile(self) -> Optional[Profile]:
+  def get_current_user_profile(self) -> Optional[Profile]:
     r = requests.get("https://api.spotify.com/v1/me",
                      headers=self._headers())
     validate_response(r)
@@ -148,7 +148,7 @@ class ApiClient:
       data.get('id'), data.get('display_name'), data.get('uri'),
       data.get('country'))
 
-  def fetch_playlists(self) -> List[Playlist]:
+  def get_current_user_playlists(self) -> List[Playlist]:
     r = requests.get("https://api.spotify.com/v1/me/playlists",
                      headers=self._headers())
 
@@ -162,14 +162,32 @@ class ApiClient:
 
     return playlists
 
-  def replace_tracks(self, playlist_id: str, uris: List[str]):
-    payload = dict(uris=uris)
+  def change_playlist_details(self,
+    playlist_id: str,
+    name: Optional[str] = None,
+    public: Optional[bool] = None,
+    collaborative: Optional[bool] = None,
+    description: Optional[str] = None
+  ):
+    payload = dict(name=name, public=public, collaborative=collaborative,
+                   description=description)
+    payload = {k: v for k, v in payload.items() if v is not None}
 
     r = requests.put(
-      f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks?uris={','.join(uris)}",
-      json=json.dumps(payload),
+      f"https://api.spotify.com/v1/playlists/{playlist_id}",
+      json=payload,
       headers=self._headers()
     )
     validate_response(r)
 
-    print(r.json())
+  def replace_playlist_items(self, playlist_id: str, uris: List[str]) -> str:
+    payload = dict(uris=uris)
+
+    r = requests.put(
+      f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks?uris={','.join(uris)}",
+      json=payload,
+      headers=self._headers()
+    )
+    validate_response(r)
+
+    return r.json().get('snapshop_it')

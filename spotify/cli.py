@@ -1,6 +1,6 @@
 import click
 
-from . import service, config, user, data
+from spotify import service, config, user, data
 
 
 @click.group()
