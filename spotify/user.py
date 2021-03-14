@@ -4,7 +4,7 @@ import pathlib
 from dataclasses import dataclass
 from typing import Optional
 
-from . import api
+from spotify import api
 
 logger = logging.getLogger(__name__)
 
@@ -27,11 +27,9 @@ class UserData:
       f.write(json.dumps(self.to_dict()))
 
 
-
 def create_user_data_from_dict(o: dict) -> UserData:
   user_data = UserData()
-  token = o.get('token')
-  if token:
+  if token := o.get('token'):
     user_data.token = api.create_token_from_dict(token)
   user_data.reload_playlist_id = o.get('reload_playlist_id')
 

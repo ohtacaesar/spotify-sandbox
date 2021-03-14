@@ -15,7 +15,7 @@ class ApiTest(unittest.TestCase):
     )
 
     client = api.ApiClient('test_id', 'test_secret', token)
-    client.fetch_playlists()
+    client.get_current_user_playlists()
 
 
 if __name__ == '__main__':
