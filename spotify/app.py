@@ -1,21 +1,12 @@
 import logging
 import pathlib
 import urllib.parse
-from typing import Optional
 
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from spotify import data, api, service, user, config
-
-logger = logging.getLogger('spotify')
-logger.setLevel(logging.INFO)
-formatter = logging.Formatter(
-  'level:%(levelname)s\ttime:%(asctime)s\tname:%(name)s(%(lineno)d)\tmessage:%(message)s')
-handler = logging.StreamHandler()
-handler.setFormatter(formatter)
-logger.addHandler(handler)
 
 REDIRECT_URI = 'http://localhost:8000/login/callback'
 SCOPES = [
@@ -26,24 +17,16 @@ SCOPES = [
 
 SESSION = {}
 
+logger = logging.getLogger(__name__)
+
 secret = config.get_api_client_secret()
+ranking_client = data.RankingClient()
 
 app = FastAPI()
 
 base_dir_path = pathlib.Path(__file__).parent
 template_dir_path = base_dir_path / "templates"
 templates = Jinja2Templates(directory=template_dir_path)
-
-ranking_client = data.RankingClient()
-
-
-def get_api_client() -> Optional[api.ApiClient]:
-  data = user.get_user_data()
-  token = data.token
-  if not token:
-    return None
-
-  return api.ApiClient(secret.client_id, secret.client_secret, token)
 
 
 def get_api_service() -> service.ApiService:
@@ -52,11 +35,14 @@ def get_api_service() -> service.ApiService:
 
 @app.get("/")
 async def home(request: Request):
+  user_data = user.get_user_data()
   return templates.TemplateResponse(
     "home.html", dict(
       request=request,
       songs=ranking_client.get_song_list(),
-      artists=ranking_client.get_artists_dict()
+      artists=ranking_client.get_artists_dict(),
+      blocking_songs=set(user_data.blocking_songs),
+      blocking_artists=set(user_data.blocking_artists),
     )
   )
 
@@ -79,8 +65,27 @@ async def playlists(request: Request):
   )
 
 
+@app.post('/songs/{id}/block')
+async def block_song(id: str):
+  logger.info('id=%s', id)
+  user_data = user.get_user_data()
+  user_data.blocking_songs.append(id)
+  user_data.save()
+
+  return RedirectResponse('/', 302)
+
+
+@app.post('/songs/{id}/unblock')
+async def unblock_song(id: str):
+  user_data = user.get_user_data()
+  user_data.blocking_songs.remove(id)
+  user_data.save()
+
+  return RedirectResponse('/', 302)
+
+
 @app.post('/replace_playlist')
-async def replace_playlist(request: Request):
+async def replace_playlist():
   get_api_service().replace_playlist()
   return RedirectResponse('/', 302)
 
@@ -125,7 +130,7 @@ async def login_callback(code: str = None):
     logger.error(str(e))
     return RedirectResponse('/', 302)
 
-  client = get_api_client()
+  client = api.ApiClient(secret.client_id, secret.client_secret, token)
   profile = client.get_current_user_profile()
   user_data.profile = profile
   user_data.save()
