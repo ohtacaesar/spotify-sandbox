@@ -18,17 +18,27 @@
         <th>title</th>
         <th>artis</th>
         <th>count</th>
-        <th>id</th>
+        <th>設定</th>
       </tr>
       </thead>
       <tbody>
       {% for song in songs %}
-      <tr>
+      <tr class="{{ 'blocked' if song.id in blocking_songs }}">
         <td>{{ song.rank }}</td>
         <td><a href="{{ song.url }}">{{ song.title }}</a></td>
         <td>{{ song.artist }}</td>
         <td>{{ song.count }}</td>
-        <td>{{ song.uri }}</td>
+        <td>
+          {% if song.id in blocking_songs %}
+          <form action="/songs/{{ song.id }}/unblock" method="post">
+            <button>ブロック解除</button>
+          </form>
+          {% else %}
+          <form action="/songs/{{ song.id }}/block" method="post">
+            <button>ブロック</button>
+          </form>
+          {% endif %}
+        </td>
       </tr>
       {% endfor %}
       </tbody>

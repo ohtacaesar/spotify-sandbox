@@ -70,8 +70,17 @@ class ApiService:
         raise Exception("user data not contains reload_playlist_id")
 
     now = datetime.now(JST)
+    blocking_songs = set(self.__user_data.blocking_songs)
     song_list = self.__ranking_client.get_song_list()
-    uris = [song.uri for song in song_list[:100]]
+
+    uris = []
+    for song in song_list:
+      if song.id in blocking_songs:
+        continue
+      uris.append(song.uri)
+      if len(uris) == 100:
+        break
+
     try:
       self.__get_api_client().replace_playlist_items(playlist_id, uris)
     except api.AccessTokenExpiredError:
