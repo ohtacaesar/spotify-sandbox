@@ -20,14 +20,11 @@
       <td>{{ playlist.public }}</td>
       <td>{{ '〇' if playlist.id == reload_playlist_id }}</td>
       <td>
+        {% if profile.id == playlist.owner_id %}
         <form action="/playlists/{{ playlist.id }}/set" method="post">
           <button>自動更新対象設定</button>
         </form>
-      </td>
-      <td>
-        <form action="/playlists/{{ playlist.id }}/replace" method="post">
-          <button>REPLACE</button>
-        </form>
+        {% endif %}
       </td>
     </tr>
     {% endfor %}

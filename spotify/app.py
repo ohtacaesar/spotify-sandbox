@@ -63,13 +63,16 @@ async def home(request: Request):
 
 @app.get('/playlists')
 async def playlists(request: Request):
-  user_data = user.get_user_data()
   api_service = get_api_service()
+  profile = api_service.get_profile()
+  user_data = user.get_user_data()
+
   playlists = api_service.get_playlists()
 
   return templates.TemplateResponse(
     "playlists.html", dict(
       request=request,
+      profile=profile,
       playlists=playlists,
       reload_playlist_id=user_data.reload_playlist_id
     )
@@ -115,16 +118,16 @@ async def login():
 async def login_callback(code: str = None):
   user_data = user.get_user_data()
   try:
-    token = api.fetch_token(code, secret.client_id, secret.client_secret,
-                            REDIRECT_URI)
+    token = api.fetch_token(
+      code, secret.client_id, secret.client_secret, REDIRECT_URI)
     user_data.token = token
-    user_data.save()
   except Exception as e:
     logger.error(str(e))
     return RedirectResponse('/', 302)
 
   client = get_api_client()
   profile = client.get_current_user_profile()
-  SESSION['profile'] = profile
+  user_data.profile = profile
+  user_data.save()
 
   return RedirectResponse(SESSION.pop('redirect', '/'), 302)
