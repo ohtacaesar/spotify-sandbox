@@ -1,7 +1,6 @@
 import json
 import logging
 import pathlib
-from dataclasses import dataclass
 from typing import Optional
 
 from spotify import api
@@ -11,15 +10,16 @@ logger = logging.getLogger(__name__)
 USER_DATA_PATH = pathlib.Path('user_data.json')
 
 
-@dataclass()
 class UserData:
   token: Optional[api.Token] = None
+  profile: Optional[api.Profile] = None
   reload_playlist_id: Optional[str] = None
 
   def to_dict(self) -> dict:
     return dict(
+      token=self.token.__dict__.copy() if self.token else None,
+      profile=self.profile.__dict__.copy() if self.profile else None,
       reload_playlist_id=self.reload_playlist_id,
-      token=self.token.to_dict() if self.token else None
     )
 
   def save(self):
@@ -31,6 +31,8 @@ def create_user_data_from_dict(o: dict) -> UserData:
   user_data = UserData()
   if token := o.get('token'):
     user_data.token = api.create_token_from_dict(token)
+  if profile := o.get('profile'):
+    user_data.profile = api.create_profile_from_dict(profile)
   user_data.reload_playlist_id = o.get('reload_playlist_id')
 
   return user_data

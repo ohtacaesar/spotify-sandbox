@@ -1,5 +1,4 @@
 import base64
-import json
 import logging
 from dataclasses import dataclass
 from typing import Optional, List
@@ -33,9 +32,6 @@ class Token:
   expires_in: int
   refresh_token: str
 
-  def to_dict(self) -> dict:
-    return self.__dict__.copy()
-
 
 def create_token_from_dict(o: dict) -> Token:
   return Token(
@@ -55,12 +51,22 @@ class Profile:
   country: str
 
 
+def create_profile_from_dict(o: dict) -> Profile:
+  return Profile(
+    o['id'],
+    o['display_name'],
+    o['uri'],
+    o['country']
+  )
+
+
 @dataclass()
 class Playlist:
   id: str
   name: str
   public: bool
   uri: str
+  owner_id: str
 
 
 def fetch_token(
@@ -156,9 +162,10 @@ class ApiClient:
 
     playlists = []
     for item in r.json()['items']:
-      playlists.append(
-        Playlist(item['id'], item['name'], item['public'], item['uri'])
-      )
+      playlists.append(Playlist(
+        item['id'], item['name'], item['public'], item['uri'],
+        item['owner']['id']
+      ))
 
     return playlists
 

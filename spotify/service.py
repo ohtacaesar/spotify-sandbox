@@ -42,6 +42,21 @@ class ApiService:
       self.__user_data.token = token
       self.__user_data.save()
 
+  def get_profile(self) -> api.Profile:
+    if profile := self.__user_data.profile:
+      return profile
+
+    try:
+      profile = self.__get_api_client().get_current_user_profile()
+    except api.AccessTokenExpiredError:
+      self.__refresh_token()
+      profile = self.__get_api_client().get_current_user_profile()
+
+    self.__user_data.profile = profile
+    self.__user_data.save()
+
+    return profile
+
   def get_playlists(self) -> List[api.Playlist]:
     try:
       return self.__get_api_client().get_current_user_playlists()
@@ -63,7 +78,7 @@ class ApiService:
       self.__refresh_token()
       self.__get_api_client().replace_playlist_items(playlist_id, uris)
 
-    description = f"Updated at {now.strftime('%Y-%m-%d %H:%M:%S')}"
+    description = f"{now.strftime('%Y-%m-%d %H:%M:%S')}更新"
     self.__get_api_client().change_playlist_details(
       playlist_id, description=description)
 
