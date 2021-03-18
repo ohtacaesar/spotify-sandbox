@@ -1,7 +1,10 @@
 import csv
 import logging
 from dataclasses import dataclass
+from datetime import datetime
 from typing import List, Dict
+import pathlib
+from spotify import JST
 
 import requests
 
@@ -30,10 +33,19 @@ class Song:
 class RankingClient:
   song_list: List[Song] = []
 
-  def _refresh(self):
-    r = requests.get(URL)
-    logger.info(f"GET(url={URL}, status_code={r.status_code})")
-    reader = csv.reader(r.text.split("\n"))
+  def _refresh(self, force_refresh: bool):
+    path = pathlib.Path('ranking.csv')
+    if not force_refresh and path.is_file():
+      mtime = datetime.fromtimestamp(path.stat().st_mtime, JST)
+      logger.info(f"READ {path}(mtime={mtime})")
+      text = path.read_text()
+    else:
+      r = requests.get(URL)
+      logger.info(f"GET {URL}(status_code={r.status_code})")
+      text = r.text
+      path.write_text(text)
+
+    reader = csv.reader(text.split("\n"))
     next(reader)
     next(reader)
     song_list = []
@@ -49,15 +61,15 @@ class RankingClient:
 
     self.song_list = song_list
 
-  def get_song_list(self, refresh=False) -> List[Song]:
-    if not self.song_list or refresh:
-      self._refresh()
+  def get_song_list(self, force_refresh: bool = False) -> List[Song]:
+    if not self.song_list or force_refresh:
+      self._refresh(force_refresh)
 
     return self.song_list
 
-  def get_artists_dict(self, refresh=False) -> Dict[str, int]:
-    if not self.song_list or refresh:
-      self._refresh()
+  def get_artists_dict(self, force_refresh: bool = False) -> Dict[str, int]:
+    if not self.song_list or force_refresh:
+      self._refresh(force_refresh)
     artists = {}
     for song in self.song_list:
       artists.setdefault(song.artist, []).append(song)

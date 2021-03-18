@@ -10,31 +10,29 @@
 
 <div style="display: flex">
   <div style="margin-right: 40px">
-    <h2>songs</h2>
+    <h2>tracks</h2>
     <table border="1">
       <thead>
       <tr>
         <th>rank</th>
-        <th>title</th>
-        <th>artis</th>
-        <th>count</th>
+        <th>name</th>
+        <th>artists</th>
         <th>設定</th>
       </tr>
       </thead>
       <tbody>
-      {% for song in songs %}
-      <tr class="{{ 'blocked' if song.id in blocking_songs }}">
-        <td>{{ song.rank }}</td>
-        <td><a href="{{ song.url }}">{{ song.title }}</a></td>
-        <td>{{ song.artist }}</td>
-        <td>{{ song.count }}</td>
+      {% for track in tracks %}
+      <tr class="{{ 'blocked' if track.id in blocking_tracks or blocking_artists|intersect(track.artists|map(attribute='id')) }}">
+        <td>{{ loop.index }}</td>
+        <td>{{ track.name }}</td>
+        <td>{{ track.artists|map(attribute='name')|join(', ') }}</td>
         <td>
-          {% if song.id in blocking_songs %}
-          <form action="/songs/{{ song.id }}/unblock" method="post">
+          {% if track.id in blocking_tracks %}
+          <form action="/tracks/{{ track.id }}/unblock" method="post">
             <button>ブロック解除</button>
           </form>
           {% else %}
-          <form action="/songs/{{ song.id }}/block" method="post">
+          <form action="/tracks/{{ track.id }}/block" method="post">
             <button>ブロック</button>
           </form>
           {% endif %}
@@ -50,15 +48,25 @@
       <thead>
       <tr>
         <th>artist</th>
-        <th>曲数</th>
+        <th>設定</th>
       </tr>
 
       </thead>
       <tbody>
-      {% for artist, songs in artists.items() %}
-      <tr>
-        <td>{{ artist }}</td>
-        <td>{{ songs|length }}</td>
+      {% for artist in artists %}
+      <tr class="{{ 'blocked' if artist.id in blocking_artists }}">
+        <td>{{ artist.name }}</td>
+        <td>
+          {% if artist.id in blocking_artists %}
+          <form action="/artists/{{ artist.id }}/unblock" method="post">
+            <button>ブロック解除</button>
+          </form>
+          {% else %}
+          <form action="/artists/{{ artist.id }}/block" method="post">
+            <button>ブロック</button>
+          </form>
+          {% endif %}
+        </td>
       </tr>
       {% endfor %}
       </tbody>

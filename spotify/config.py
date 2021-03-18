@@ -1,22 +1,16 @@
-from dataclasses import dataclass
-import pathlib
 import json
+import pathlib
+from spotify import api
 
 SECRET_PATH = pathlib.Path("secret.json")
 
 
-@dataclass()
-class ApiSecret:
-  client_id: str
-  client_secret: str
-
-
-def get_api_client_secret() -> ApiSecret:
+def get_client_credentials() -> api.ClientCredentials:
   assert SECRET_PATH.is_file()
   with SECRET_PATH.open() as f:
     secret = json.load(f)
 
-  api_secret = ApiSecret(
+  api_secret = api.ClientCredentials(
     secret['client_id'],
     secret['client_secret'],
   )

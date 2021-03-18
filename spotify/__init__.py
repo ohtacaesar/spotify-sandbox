@@ -1,4 +1,5 @@
 import logging
+from datetime import timezone, timedelta
 
 logger = logging.getLogger('spotify')
 logger.setLevel(logging.INFO)
@@ -7,3 +8,5 @@ formatter = logging.Formatter(
 handler = logging.StreamHandler()
 handler.setFormatter(formatter)
 logger.addHandler(handler)
+
+JST = timezone(timedelta(hours=9), 'JST')

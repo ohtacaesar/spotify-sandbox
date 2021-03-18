@@ -2,6 +2,7 @@ import base64
 import logging
 from dataclasses import dataclass
 from typing import Optional, List
+from urllib.parse import urlencode
 
 import requests
 
@@ -25,7 +26,23 @@ class ApiError(Exception):
 
 
 @dataclass()
-class Token:
+class ClientCredentials:
+  id: str
+  secret: str
+
+  def get_basic_code(self):
+    return base64.b64encode(f"{self.id}:{self.secret}".encode('utf-8')).decode()
+
+
+@dataclass()
+class ClientCredentialsFlowToken:
+  access_token: str
+  token_type: str
+  expires_in: int
+
+
+@dataclass()
+class AuthorizationCodeFlowToken:
   access_token: str
   token_type: str
   scope: str
@@ -33,8 +50,30 @@ class Token:
   refresh_token: str
 
 
-def create_token_from_dict(o: dict) -> Token:
-  return Token(
+@dataclass(frozen=True)
+class Artist:
+  id: str
+  name: str
+
+  @property
+  def uri(self):
+    return f"spotify:artist:{self.id}"
+
+
+@dataclass(frozen=True)
+class Track:
+  id: str
+  name: str
+  popularity: int
+  artists: List[Artist]
+
+  @property
+  def uri(self):
+    return f"spotify:track:{self.id}"
+
+
+def create_token_from_dict(o: dict) -> AuthorizationCodeFlowToken:
+  return AuthorizationCodeFlowToken(
     o['access_token'],
     o['token_type'],
     o['scope'],
@@ -71,14 +110,12 @@ class Playlist:
 
 def fetch_token(
   code: str,
-  client_id: str,
-  client_secret: str,
+  client_credentials: ClientCredentials,
   redirect_uri: str,
-) -> Token:
+) -> AuthorizationCodeFlowToken:
   url = f"https://accounts.spotify.com/api/token"
-  secret = base64.b64encode(f"{client_id}:{client_secret}".encode('utf-8'))
 
-  headers = dict(Authorization="Basic " + secret.decode('utf-8'))
+  headers = dict(Authorization=f"Basic {client_credentials.get_basic_code()}")
   payload = dict(
     grant_type="authorization_code",
     code=code,
@@ -88,10 +125,6 @@ def fetch_token(
   validate_response(r)
   body = r.json()
   return create_token_from_dict(body)
-
-
-def refresh_token():
-  pass
 
 
 def validate_response(r: requests.Response):
@@ -111,21 +144,69 @@ def validate_response(r: requests.Response):
 
 @dataclass()
 class ApiClient:
-  client_id: str
-  client_secret: str
-  token: Token
+  __credentials: ClientCredentials
+  __token: ClientCredentialsFlowToken = None
 
   def _headers(self):
-    headers = dict(Authorization="Bearer " + self.token.access_token)
+    if self.__token is None:
+      self.refresh_token()
+    headers = dict(Authorization="Bearer " + self.__token.access_token)
     return headers
 
-  def refresh_token(self) -> Token:
-    payload = dict(grant_type='refresh_token',
-                   refresh_token=self.token.refresh_token)
+  def refresh_token(self) -> ClientCredentialsFlowToken:
+    payload = dict(grant_type='client_credentials')
+    headers = dict(Authorization=f"Basic {self.__credentials.get_basic_code()}")
 
-    secret = f"{self.client_id}:{self.client_secret}".encode('utf-8')
-    secret = base64.b64encode(secret)
-    headers = dict(Authorization="Basic " + secret.decode('utf-8'))
+    r = requests.post('https://accounts.spotify.com/api/token', payload,
+                      headers=headers)
+    validate_response(r)
+    data = r.json()
+    self.__token = ClientCredentialsFlowToken(
+      data['access_token'],
+      data['token_type'],
+      data['expires_in']
+    )
+    return self.__token
+
+  def get_several_tracks(self,
+    ids: List[str],
+    market: Optional[str] = None
+  ) -> List[Track]:
+    params = dict(ids=','.join(ids))
+    if market:
+      params['market'] = market
+
+    r = requests.get(
+      f"https://api.spotify.com/v1/tracks?{urlencode(params)}",
+      headers=self._headers()
+    )
+    validate_response(r)
+    items = r.json()['tracks']
+    logger.info("Fetched %d tracks", len(items))
+
+    tracks = []
+    for item in items:
+      artists = [Artist(a['id'], a['name']) for a in item['artists']]
+      tracks.append(
+        Track(item['id'], item['name'], item['popularity'], artists=artists))
+
+    return tracks
+
+
+@dataclass()
+class UserResourceApiClient:
+  __credentials: ClientCredentials
+  __token: AuthorizationCodeFlowToken
+
+  def _headers(self):
+    headers = dict(Authorization="Bearer " + self.__token.access_token)
+    return headers
+
+  def refresh_token(self) -> AuthorizationCodeFlowToken:
+    payload = dict(grant_type='refresh_token',
+                   refresh_token=self.__token.refresh_token)
+
+    headers = dict(Authorization=f"Basic {self.__credentials.get_basic_code()}")
     r = requests.post(f"https://accounts.spotify.com/api/token", data=payload,
                       headers=headers)
 
@@ -133,14 +214,14 @@ class ApiClient:
       raise AuthorizationError(r.json().get("error"))
 
     data = r.json()
-    token = Token(
+    token = AuthorizationCodeFlowToken(
       data['access_token'],
       data['token_type'],
       data['scope'],
       data['expires_in'],
-      self.token.refresh_token
+      self.__token.refresh_token
     )
-    self.token = token
+    self.__token = token
 
     return token
 
@@ -188,13 +269,12 @@ class ApiClient:
     validate_response(r)
 
   def replace_playlist_items(self, playlist_id: str, uris: List[str]) -> str:
+    # urlencodeするとurl too longになる
+    uris = ','.join(uris)
     payload = dict(uris=uris)
 
-    r = requests.put(
-      f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks?uris={','.join(uris)}",
-      json=payload,
-      headers=self._headers()
-    )
+    url = f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks?uris={uris}"
+    r = requests.put(url, json=payload, headers=self._headers())
     validate_response(r)
 
-    return r.json().get('snapshop_it')
+    return r.json().get('snapshot_id')
