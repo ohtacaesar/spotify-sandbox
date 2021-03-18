@@ -1,5 +1,8 @@
 .idea/
 *.iml
+
+ranking.csv
+tracks.json
 secret.json
 user_data.json
 
