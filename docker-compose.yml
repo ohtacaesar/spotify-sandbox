@@ -8,3 +8,8 @@ services:
     volumes:
       - ./:/app
     command: "uvicorn spotify.app:app --reload --host 0.0.0.0"
+  backend:
+    build:
+      context: ./
+    ports:
+      - 8001:8000

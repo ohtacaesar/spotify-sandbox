@@ -1,10 +1,7 @@
 import csv
 import logging
 from dataclasses import dataclass
-from datetime import datetime
 from typing import List, Dict
-import pathlib
-from spotify import JST
 
 import requests
 
@@ -34,16 +31,9 @@ class RankingClient:
   song_list: List[Song] = []
 
   def _refresh(self, force_refresh: bool):
-    path = pathlib.Path('ranking.csv')
-    if not force_refresh and path.is_file():
-      mtime = datetime.fromtimestamp(path.stat().st_mtime, JST)
-      logger.info(f"READ {path}(mtime={mtime})")
-      text = path.read_text()
-    else:
-      r = requests.get(URL)
+    with requests.get(URL) as r:
       logger.info(f"GET {URL}(status_code={r.status_code})")
       text = r.text
-      path.write_text(text)
 
     reader = csv.reader(text.split("\n"))
     next(reader)

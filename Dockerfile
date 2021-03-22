@@ -1,9 +1,13 @@
 FROM python:3.8
 
-RUN set -eux \
-  &&  pip install fastapi uvicorn jinja2 requests
-
 WORKDIR /app
 
+COPY setup.py ./
+COPY setup.cfg ./
+COPY spotify ./spotify
 
-CMD ["uvicorn", "spotify.app:app", "--reload", "--host", "0.0.0.0"]
+RUN python ./setup.py install
+
+COPY secret.json ./
+
+CMD ["uvicorn", "spotify.app:app", "--host", "0.0.0.0"]
