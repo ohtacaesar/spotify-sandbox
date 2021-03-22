@@ -27,8 +27,6 @@ class UserData:
     )
 
   def save(self):
-    logger.info(self.blocking_tracks)
-    logger.info(self.blocking_artists)
     with USER_DATA_PATH.open('w') as f:
       f.write(json.dumps(self.to_dict()))
 
