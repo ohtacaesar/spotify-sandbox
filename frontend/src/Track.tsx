@@ -50,14 +50,6 @@ class UserTrack {
   }
 }
 
-interface TrackTableProps {
-}
-
-interface TrackTableState {
-  userTracks: UserTrack[];
-  userArtists: UserArtist[];
-}
-
 interface TrackRowProps {
   rank: number;
   userTrack: UserTrack;
@@ -188,17 +180,60 @@ class ArtistRow extends React.Component<ArtistRowProps, CommonState> {
   }
 }
 
+interface ReplacePlaylistButtonState {
+  inProgress: boolean;
+}
+
+class ReplacePlaylistButton extends React.Component<any, ReplacePlaylistButtonState> {
+  constructor(props: any) {
+    super(props);
+    this.state = {
+      inProgress: false
+    }
+  }
+
+  replacePlaylist = () => {
+    if (this.state.inProgress) {
+      return;
+    }
+
+    this.setState({inProgress: true});
+    fetch(BASE_URL + '/replace_playlist', {
+      method: 'POST'
+    }).then((r) => {
+    }).finally(() => this.setState({inProgress: false}))
+  }
+
+  render() {
+    return <button
+        onClick={() => this.replacePlaylist()}
+        disabled={this.state.inProgress}>プレイリスト更新
+    </button>
+  }
+}
+
+
+interface TrackTableProps {
+}
+
+interface TrackTableState {
+  userTracks: UserTrack[];
+  userArtists: UserArtist[];
+  inProgress: boolean;
+}
+
 export class TrackTable extends React.Component<TrackTableProps, TrackTableState> {
   constructor(props: TrackTableProps) {
     super(props);
     this.state = {
       userTracks: [],
       userArtists: [],
+      inProgress: false,
     };
   }
 
   componentDidMount() {
-    fetch('http://localhost:8000/tracks_and_artists')
+    fetch(BASE_URL + '/tracks_and_artists')
     .then(res => res.json())
     .then((data) => {
       const responseTracks: ResponseTrack[] = data['tracks'];
@@ -225,49 +260,54 @@ export class TrackTable extends React.Component<TrackTableProps, TrackTableState
       this.setState({
         userTracks: userTracks,
         userArtists: userArtists,
+        inProgress: false,
       });
     })
   }
 
+
   render() {
     return (
-        <div style={{display: "flex"}}>
-          <div>
-            <table>
-              <thead>
-              <tr>
-                <th>rank</th>
-                <th>name</th>
-                <th>artists</th>
-              </tr>
-              </thead>
-              <tbody>
-              {this.state.userTracks.map((userTrack, i) => {
-                return <TrackRow
-                    rank={i + 1}
-                    userTrack={userTrack}
-                    updateParent={() => this.forceUpdate()}
-                    key={userTrack.id}/>
-              })}
-              </tbody>
-            </table>
-          </div>
-          <div>
-            <table>
-              <thead>
-              <tr>
-                <th>name</th>
-              </tr>
-              </thead>
-              <tbody>
-              {this.state.userArtists.map((userArtist) => {
-                return <ArtistRow
-                    userArtist={userArtist}
-                    updateParent={() => this.forceUpdate()}
-                    key={userArtist.id}/>
-              })}
-              </tbody>
-            </table>
+        <div className="App">
+          <ReplacePlaylistButton/>
+          <div style={{display: "flex"}}>
+            <div>
+              <table>
+                <thead>
+                <tr>
+                  <th>rank</th>
+                  <th>name</th>
+                  <th>artists</th>
+                </tr>
+                </thead>
+                <tbody>
+                {this.state.userTracks.map((userTrack, i) => {
+                  return <TrackRow
+                      rank={i + 1}
+                      userTrack={userTrack}
+                      updateParent={() => this.forceUpdate()}
+                      key={userTrack.id}/>
+                })}
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <table>
+                <thead>
+                <tr>
+                  <th>name</th>
+                </tr>
+                </thead>
+                <tbody>
+                {this.state.userArtists.map((userArtist) => {
+                  return <ArtistRow
+                      userArtist={userArtist}
+                      updateParent={() => this.forceUpdate()}
+                      key={userArtist.id}/>
+                })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
     )

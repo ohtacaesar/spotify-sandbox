@@ -4,9 +4,9 @@ import urllib.parse
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from fastapi.staticfiles import StaticFiles
 
 from spotify import data, api, service, user, config
+from spotify.fastapi.staticfiles import ReactStaticFiles
 
 REDIRECT_URI = 'http://localhost:8000/login/callback'
 SCOPES = [
@@ -29,7 +29,7 @@ app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"])
 app.mount(
   '/app',
-  StaticFiles(packages=['spotify'], html=True),
+  ReactStaticFiles(packages=['spotify'], html=True),
   name='static'
 )
 
