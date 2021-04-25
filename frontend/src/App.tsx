@@ -1,4 +1,5 @@
-import React, {SyntheticEvent} from 'react';
+import React from 'react';
+import {BrowserRouter, Link, Redirect, Route, Switch,} from "react-router-dom";
 import './App.css';
 import {TrackTable} from './Track'
 
@@ -8,36 +9,39 @@ interface AppProps {
 }
 
 interface AppState {
-  inProgress: boolean;
 }
 
 class App extends React.Component<AppProps, AppState> {
   constructor(props: AppProps) {
     super(props);
-    this.state = {inProgress: false};
-  }
-
-  replacePlaylist = (e: SyntheticEvent) => {
-    if (this.state.inProgress) {
-      return;
-    }
-
-    this.setState({inProgress: true})
-    fetch(BASE_URL + '/replace_playlist', {
-      method: 'POST'
-    }).then((r) => {
-      this.setState({inProgress: false})
-    })
   }
 
   render() {
-    return <div className="App">
-      <button
-          onClick={this.replacePlaylist}
-          disabled={this.state.inProgress}>プレイリスト更新
-      </button>
-      <TrackTable/>
-    </div>
+    return (
+        <BrowserRouter basename="/app">
+          <div>
+            <nav>
+              <ul>
+                <li>
+                  <Link to="/track">Track</Link>
+                </li>
+                <li>
+                  <Link to="/playlist">Playlist</Link>
+                </li>
+              </ul>
+            </nav>
+          </div>
+
+          <Switch>
+            <Route path="/track">
+              <TrackTable/>
+            </Route>
+            <Route path="/playlist">
+            </Route>
+            <Route><Redirect to="/"/></Route>
+          </Switch>
+        </BrowserRouter>
+    )
   }
 }
 
