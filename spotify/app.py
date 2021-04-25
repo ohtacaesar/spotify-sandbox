@@ -1,10 +1,10 @@
 import logging
-import pathlib
 import urllib.parse
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 
 from spotify import data, api, service, user, config
 
@@ -26,16 +26,16 @@ ranking_service = service.RankingService(api_client, ranking_client)
 
 app = FastAPI()
 
-base_dir_path = pathlib.Path(__file__).parent
-template_dir_path = base_dir_path / "templates"
-templates = Jinja2Templates(directory=template_dir_path)
+app.add_middleware(CORSMiddleware, allow_origins=["*"])
+app.mount(
+  '/app',
+  StaticFiles(packages=['spotify'], html=True),
+  name='static'
+)
 
 
 def intersect(a, b):
   return set(a).intersection(b)
-
-
-templates.env.filters['intersect'] = intersect
 
 
 def get_user_resource_api_client() -> api.UserResourceApiClient:
@@ -52,17 +52,33 @@ def get_api_service() -> service.UserService:
 
 
 @app.get("/")
-async def home(request: Request):
+async def home():
+  return RedirectResponse("/app")
+
+
+@app.get("/tracks_and_artists")
+async def tracks_and_artists(request: Request):
   user_data = user.get_user_data()
   tracks = ranking_service.get_tracks()
 
-  return templates.TemplateResponse("home.html", dict(
-    request=request,
-    tracks=tracks,
-    artists=ranking_service.get_artists(),
-    blocking_tracks=set(user_data.blocking_tracks),
-    blocking_artists=set(user_data.blocking_artists),
-  ))
+  blocking_tracks = set(user_data.blocking_tracks)
+  blocking_artists = set(user_data.blocking_artists)
+  user_tracks = []
+  user_artists = {}
+  for track in tracks:
+    artist_ids = []
+    for artist in track.artists:
+      artist_ids.append(artist.id)
+      if artist.id in user_artists:
+        continue
+
+      user_artists[artist.id] = data.UserArtist(
+        artist.id, artist.name, artist.id in blocking_artists)
+
+    user_tracks.append(data.UserTrack(
+      track.id, track.name, artist_ids, track.id in blocking_tracks))
+
+  return dict(tracks=user_tracks, artists=list(user_artists.values()))
 
 
 @app.get('/playlists')
@@ -73,15 +89,6 @@ async def playlists(request: Request):
 
   playlists = api_service.get_playlists()
 
-  return templates.TemplateResponse(
-    "playlists.html", dict(
-      request=request,
-      profile=profile,
-      playlists=playlists,
-      reload_playlist_id=user_data.reload_playlist_id
-    )
-  )
-
 
 @app.post('/tracks/{id}/block')
 async def block_track(id: str):
@@ -90,16 +97,12 @@ async def block_track(id: str):
   user_data.blocking_tracks.append(id)
   user_data.save()
 
-  return RedirectResponse('/', 302)
-
 
 @app.post('/tracks/{id}/unblock')
 async def unblock_track(id: str):
   user_data = user.get_user_data()
   user_data.blocking_tracks.remove(id)
   user_data.save()
-
-  return RedirectResponse('/', 302)
 
 
 @app.post('/artists/{id}/block')
@@ -108,8 +111,6 @@ async def block_artist(id: str):
   user_data.blocking_artists.append(id)
   user_data.save()
 
-  return RedirectResponse('/', 302)
-
 
 @app.post('/artists/{id}/unblock')
 async def unblock_artist(id: str):
@@ -117,13 +118,10 @@ async def unblock_artist(id: str):
   user_data.blocking_artists.remove(id)
   user_data.save()
 
-  return RedirectResponse('/', 302)
-
 
 @app.post('/replace_playlist')
 async def replace_playlist():
   get_api_service().replace_playlist()
-  return RedirectResponse('/', 302)
 
 
 @app.post('/playlists/{playlist_id}/set')
@@ -132,13 +130,10 @@ async def set_target_playlist(playlist_id: str):
   user_data.reload_playlist_id = playlist_id
   user_data.save()
 
-  return RedirectResponse('/playlists', 302)
-
 
 @app.post('/playlists/{playlist_id}/replace')
 async def replace(playlist_id: str):
   get_api_service().replace_playlist(playlist_id)
-  return RedirectResponse('/playlists', 302)
 
 
 @app.get("/login")
