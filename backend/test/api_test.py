@@ -1,6 +1,6 @@
 import unittest
 
-from spotify import api, config, data, user
+from spotify import api, config, data
 
 
 class ApiTest(unittest.TestCase):

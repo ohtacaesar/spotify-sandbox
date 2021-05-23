@@ -7,7 +7,9 @@ from spotify import api
 
 logger = logging.getLogger(__name__)
 
-USER_DATA_PATH = pathlib.Path('user_data.json')
+USERDATA_DIR = pathlib.Path('tmp/')
+if not USERDATA_DIR.is_dir():
+  USERDATA_DIR.mkdir()
 
 
 class UserData:
@@ -27,7 +29,8 @@ class UserData:
     )
 
   def save(self):
-    with USER_DATA_PATH.open('w') as f:
+    path = USERDATA_DIR / self.profile.id
+    with path.open('w') as f:
       f.write(json.dumps(self.to_dict()))
 
 
@@ -44,11 +47,12 @@ def create_user_data_from_dict(o: dict) -> UserData:
   return user_data
 
 
-def get_user_data() -> UserData:
-  if not USER_DATA_PATH.is_file():
+def get_user_data(profile_id: str) -> UserData:
+  path = USERDATA_DIR / profile_id
+  if not path.is_file():
     return UserData()
 
-  with USER_DATA_PATH.open() as f:
+  with path.open() as f:
     try:
       d = json.load(f)
       user_data = create_user_data_from_dict(d)

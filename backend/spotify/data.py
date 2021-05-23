@@ -61,7 +61,8 @@ class RankingClient:
     next(reader)
     song_list = []
     for row in reader:
-      if len(row) < 5: continue
+      if len(row) < 5:
+        continue
       rank = int(row[0])
       title = row[1]
       artist = row[2]
