@@ -1,6 +1,7 @@
 .idea/
 *.iml
 spotify/statics
+tmp/
 
 *.csv
 tracks.json
